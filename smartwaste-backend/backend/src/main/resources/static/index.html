@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Waste AI</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            width: 420px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 5px;
+        }
+
+        .tagline {
+            font-size: 13px;
+            color: gray;
+            margin-bottom: 15px;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: none;
+        }
+
+        button {
+            margin-top: 12px;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: #007bff;
+            color: white;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .clear-btn {
+            background: #6c757d;
+        }
+
+        .clear-btn:hover {
+            background: #495057;
+        }
+
+        #result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #eef3ff;
+            border-radius: 10px;
+            display: none;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            margin-top: 10px;
+            display: none;
+            color: #555;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Smart Waste AI</h2>
+    <div class="tagline">AI-powered complaint analysis for smart cities</div>
+
+    <input type="text" id="location" placeholder="Enter location (optional)">
+
+    <textarea id="complaint" placeholder="Describe your complaint..."></textarea>
+
+    <button onclick="analyze()">Analyze Complaint</button>
+    <button class="clear-btn" onclick="clearText()">Clear</button>
+
+    <div class="loading" id="loading">
+        <span class="spinner"></span> Analyzing...
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<script>
+    function analyze() {
+        let complaint = document.getElementById("complaint").value;
+        let location = document.getElementById("location").value;
+
+        if (complaint.trim() === "") {
+            alert("Please enter a complaint");
+            return;
+        }
+
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("result").style.display = "none";
+
+        fetch("/api/complaints", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                description: complaint,
+                location: location || "Unknown",
+                imageUrl: "",
+                status: "PENDING"
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("loading").style.display = "none";
+
+            let resultDiv = document.getElementById("result");
+            resultDiv.style.display = "block";
+            resultDiv.innerText = data.aiResult || "Saved successfully!";
+        })
+        .catch(err => {
+            document.getElementById("loading").style.display = "none";
+            alert("Error: " + err);
+        });
+    }
+
+    function clearText() {
+        document.getElementById("complaint").value = "";
+        document.getElementById("location").value = "";
+        document.getElementById("result").style.display = "none";
+    }
+</script>
+
+</body>
+</html>
