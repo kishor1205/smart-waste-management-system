@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Waste Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #eef2f7;
+            margin: 0;
+            text-align: center;
+        }
+
+        h2 { margin-top: 20px; }
+
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .load-btn { background: #4CAF50; }
+        .hotspot-btn { background: #ff9800; }
+        .done-btn { background: #4CAF50; }
+        .delete-btn { background: #f44336; }
+
+        table {
+            width: 95%;
+            margin: auto;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .badge {
+            padding: 5px 8px;
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .high { background: red; }
+        .medium { background: orange; }
+        .low { background: green; }
+
+        .ai-box {
+            max-width: 260px;
+            font-size: 13px;
+            text-align: left;
+            background: #f1f5ff;
+            padding: 10px;
+            border-radius: 8px;
+            white-space: pre-line;
+        }
+
+        .status-pending { color: orange; font-weight: bold; }
+        .status-completed { color: green; font-weight: bold; }
+
+        img {
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        .box {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Smart Waste Dashboard</h2>
+
+<input type="text" id="search" placeholder="Search location..." onkeyup="displayData(globalData)">
+
+<select id="filter" onchange="displayData(globalData)">
+    <option value="ALL">All</option>
+    <option value="PENDING">Pending</option>
+    <option value="COMPLETED">Completed</option>
+</select>
+
+<button class="load-btn" onclick="loadComplaints()">Load</button>
+<button class="hotspot-btn" onclick="loadHotspots()">Hotspots</button>
+
+<table id="table"></table>
+
+<div id="hotspots" class="box"></div>
+
+<script>
+
+    let globalData = [];
+
+    // 🔥 LOAD DATA
+    function loadComplaints() {
+        fetch("/api/complaints")
+            .then(res => res.json())
+            .then(data => {
+                globalData = data;
+                displayData(data);
+            });
+    }
+
+    // 🔥 DISPLAY TABLE
+    function displayData(data) {
+
+        let search = document.getElementById("search").value.toLowerCase();
+        let filter = document.getElementById("filter").value;
+
+        let table = document.getElementById("table");
+
+        table.innerHTML = `
+        <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>AI Result</th>
+            <th>Image</th>
+            <th>Action</th>
+        </tr>`;
+
+        data
+        .filter(c =>
+            (filter === "ALL" || c.status === filter) &&
+            (
+                (c.location || "").toLowerCase().includes(search) ||
+                (c.description || "").toLowerCase().includes(search)
+            )
+        )
+        .forEach(c => {
+
+            let row = table.insertRow();
+
+            row.style.background = c.status === "COMPLETED" ? "#e8f5e9" : "#fff3e0";
+
+            row.insertCell(0).innerText = c.id;
+            row.insertCell(1).innerText = c.description;
+            row.insertCell(2).innerText = c.location;
+
+            row.insertCell(3).innerHTML = `
+                <span class="${c.status === 'COMPLETED' ? 'status-completed' : 'status-pending'}">
+                    ${c.status}
+                </span>
+            `;
+
+            let badge = document.createElement("span");
+            badge.className = "badge " + (c.priority || "low").toLowerCase();
+            badge.innerText = c.priority;
+            row.insertCell(4).appendChild(badge);
+
+            row.insertCell(5).innerHTML =
+                `<div class="ai-box">${c.aiResult || "No AI result"}</div>`;
+
+            // ✅ IMAGE FIX + FULL SCREEN VIEW
+            let imgCell = row.insertCell(6);
+
+            if (c.imageUrl && c.imageUrl !== "" && c.imageUrl !== "no_image") {
+
+                let img = document.createElement("img");
+
+                if (c.imageUrl.startsWith("data:image")) {
+                    img.src = c.imageUrl;
+                } else if (c.imageUrl.startsWith("http")) {
+                    img.src = c.imageUrl;
+                } else {
+                    img.src = "data:image/jpeg;base64," + c.imageUrl;
+                }
+
+                img.width = 70;
+                img.height = 70;
+
+                // 🔥 FIXED FULLSCREEN VIEW
+                img.onclick = function () {
+                    let newTab = window.open();
+                    newTab.document.body.style.margin = "0";
+                    newTab.document.body.innerHTML =
+                        `<img src="${img.src}" style="width:100%">`;
+                };
+
+                imgCell.appendChild(img);
+
+            } else {
+                imgCell.innerText = "No Image";
+            }
+
+            // ACTION BUTTONS
+            let actionCell = row.insertCell(7);
+
+            let doneBtn = document.createElement("button");
+            doneBtn.innerText = "Done";
+            doneBtn.className = "done-btn";
+            doneBtn.onclick = () => updateStatus(c.id);
+
+            let delBtn = document.createElement("button");
+            delBtn.innerText = "Delete";
+            delBtn.className = "delete-btn";
+            delBtn.onclick = () => deleteComplaint(c.id);
+
+            actionCell.appendChild(doneBtn);
+            actionCell.appendChild(delBtn);
+        });
+    }
+
+    // 🔥 UPDATE STATUS
+    function updateStatus(id) {
+        fetch(`/api/complaints/${id}/status?status=COMPLETED`, { method: "PUT" })
+            .then(() => loadComplaints());
+    }
+
+    // 🔥 DELETE
+    function deleteComplaint(id) {
+        fetch(`/api/complaints/${id}`, { method: "DELETE" })
+            .then(() => loadComplaints());
+    }
+
+    // 🔥 HOTSPOTS
+    function loadHotspots() {
+        fetch("/api/complaints/hotspots")
+            .then(res => res.json())
+            .then(data => {
+                let div = document.getElementById("hotspots");
+                div.innerHTML = "<h3>Hotspots</h3>";
+
+                data.forEach(h => {
+                    div.innerHTML += `<p>${h[0]} → ${h[1]} complaints</p>`;
+                });
+            });
+    }
+
+</script>
+
+</body>
+</html>
