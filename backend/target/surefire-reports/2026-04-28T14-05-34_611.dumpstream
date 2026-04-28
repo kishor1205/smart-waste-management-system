@@ -1,0 +1,5 @@
+# Created at 2026-04-28T14:05:36.757
+Boot Manifest-JAR contains absolute paths in classpath 'D:\Smartwaste_backend\backend\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+
