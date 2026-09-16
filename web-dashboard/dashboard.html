@@ -6,10 +6,17 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+
         body {
             font-family: Arial;
             background: #f4f6f8;
             text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
         }
 
         input, select {
@@ -26,14 +33,29 @@
             cursor: pointer;
         }
 
-        .load-btn { background: #4CAF50; }
-        .hotspot-btn { background: #ff9800; }
-        .done-btn { background: #4CAF50; }
-        .delete-btn { background: #f44336; }
+        button:hover {
+            opacity: 0.85;
+        }
+
+        .load-btn {
+            background: #4CAF50;
+        }
+
+        .hotspot-btn {
+            background: #ff9800;
+        }
+
+        .done-btn {
+            background: #4CAF50;
+        }
+
+        .delete-btn {
+            background: #f44336;
+        }
 
         table {
             width: 95%;
-            margin: auto;
+            margin: 20px auto;
             border-collapse: collapse;
             background: white;
         }
@@ -49,7 +71,10 @@
             border-bottom: 1px solid #ddd;
         }
 
-        img { border-radius: 6px; }
+        img {
+            border-radius: 6px;
+            object-fit: cover;
+        }
 
         .box {
             margin-top: 20px;
@@ -58,182 +83,824 @@
             width: 80%;
             margin-left: auto;
             margin-right: auto;
+            border-radius: 8px;
         }
+
+        #chart {
+            max-width: 800px;
+            max-height: 400px;
+        }
+
+        .message {
+            margin: 20px;
+            font-weight: bold;
+        }
+
     </style>
 </head>
+
 
 <body>
 
 <h2>♻ Smart Waste Dashboard</h2>
 
-<!-- 🔍 SEARCH + FILTER -->
-<input type="text" id="search" placeholder="Search location..." 
-       onkeyup="displayData(globalData)">
 
-<select id="filter" onchange="displayData(globalData)">
+<!-- SEARCH -->
+
+<input
+        type="text"
+        id="search"
+        placeholder="Search location or complaint..."
+        onkeyup="displayData(globalData)"
+>
+
+
+<!-- FILTER -->
+
+<select
+        id="filter"
+        onchange="displayData(globalData)"
+>
+
     <option value="ALL">All</option>
+
     <option value="Pending">Pending</option>
+
     <option value="Completed">Completed</option>
+
 </select>
 
-<button class="load-btn" onclick="loadComplaints()">Load</button>
-<button class="hotspot-btn" onclick="loadHotspots()">🔥 Hotspots</button>
-<button onclick="showChart()">📊 Chart</button>
 
-<table id="table"></table>
+<!-- BUTTONS -->
 
-<div id="hotspots" class="box"></div>
-<canvas id="chart" class="box"></canvas>
+<button
+        class="load-btn"
+        onclick="loadComplaints()"
+>
+    Load
+</button>
+
+
+<button
+        class="hotspot-btn"
+        onclick="loadHotspots()"
+>
+    🔥 Hotspots
+</button>
+
+
+<button
+        onclick="showChart()"
+>
+    📊 Chart
+</button>
+
+
+<!-- STATUS MESSAGE -->
+
+<div
+        id="message"
+        class="message"
+>
+</div>
+
+
+<!-- COMPLAINT TABLE -->
+
+<table id="table">
+
+</table>
+
+
+<!-- HOTSPOTS -->
+
+<div
+        id="hotspots"
+        class="box"
+>
+</div>
+
+
+<!-- CHART -->
+
+<canvas
+        id="chart"
+        class="box"
+></canvas>
+
 
 <script>
 
-let globalData = [];
 
-// 🚀 AUTO LOAD
-window.onload = loadComplaints;
+    // ======================================================
+    // GLOBAL DATA
+    // ======================================================
 
+    let globalData = [];
 
-// 🔄 LOAD DATA
-function loadComplaints() {
-    fetch("http://10.148.220.230:8080/api/complaints")
-    .then(res => res.json())
-    .then(data => {
-        globalData = data;
-        displayData(data);
-    });
-}
+    let chartInstance = null;
 
 
-// 📋 DISPLAY DATA (WITH SEARCH + FILTER)
-function displayData(data) {
+    // ======================================================
+    // AUTO LOAD
+    // ======================================================
 
-    let search = document.getElementById("search").value.toLowerCase();
-    let filter = document.getElementById("filter").value;
+    window.onload = function () {
 
-    let table = document.getElementById("table");
+        loadComplaints();
 
-    table.innerHTML = `
-    <tr>
-        <th>ID</th>
-        <th>Description</th>
-        <th>Location</th>
-        <th>Status</th>
-        <th>Priority</th>
-        <th>Image</th>
-        <th>Action</th>
-    </tr>`;
-
-    data
-    .filter(c => 
-        (filter === "ALL" || c.status === filter) &&
-        (
-            (c.location || "").toLowerCase().includes(search) ||
-            (c.description || "").toLowerCase().includes(search)
-        )
-    )
-    .forEach(c => {
-
-        let row = table.insertRow();
-
-        row.insertCell(0).innerText = c.id;
-        row.insertCell(1).innerText = c.description;
-        row.insertCell(2).innerText = c.location;
-        row.insertCell(3).innerText = c.status;
-        row.insertCell(4).innerText = c.priority;
-
-        // 🖼 IMAGE
-        let imgCell = row.insertCell(5);
-
-        if (c.imageUrl && c.imageUrl !== "no_image") {
-            let img = document.createElement("img");
-            img.src = "data:image/jpeg;base64," + c.imageUrl;
-            img.width = 70;
-            img.height = 70;
-            imgCell.appendChild(img);
-        } else {
-            imgCell.innerText = "No Image";
-        }
-
-        // 🔥 ACTION BUTTONS
-        let actionCell = row.insertCell(6);
-
-        let doneBtn = document.createElement("button");
-        doneBtn.innerText = "✔";
-        doneBtn.className = "done-btn";
-        doneBtn.onclick = () => updateStatus(c.id);
-
-        let delBtn = document.createElement("button");
-        delBtn.innerText = "🗑";
-        delBtn.className = "delete-btn";
-        delBtn.onclick = () => deleteComplaint(c.id);
-
-        actionCell.appendChild(doneBtn);
-        actionCell.appendChild(delBtn);
-    });
-}
+    };
 
 
-// ✔ UPDATE STATUS
-function updateStatus(id) {
-    fetch(`http://10.148.220.230:8080/api/complaints/${id}/status?status=Completed`, {
-        method: "PUT"
-    }).then(() => loadComplaints());
-}
+    // ======================================================
+    // LOAD COMPLAINTS
+    // ======================================================
+
+    function loadComplaints() {
+
+        let message =
+            document.getElementById("message");
+
+        message.innerText =
+            "Loading complaints...";
 
 
-// 🗑 DELETE
-function deleteComplaint(id) {
-    if (!confirm("Delete this complaint?")) return;
+        /*
+         * IMPORTANT:
+         * Using relative URL.
+         *
+         * This automatically uses:
+         *
+         * http://10.12.121.230:8080/api/complaints
+         *
+         * when the dashboard is opened from your server.
+         */
 
-    fetch(`http://10.148.220.230:8080/api/complaints/${id}`, {
-        method: "DELETE"
-    }).then(() => loadComplaints());
-}
+        fetch("/api/complaints")
 
 
-// 🔥 HOTSPOTS
-function loadHotspots() {
-    fetch("http://10.148.220.230:8080/api/complaints/hotspots")
-    .then(res => res.json())
-    .then(data => {
+            .then(response => {
 
-        let html = "<h3>🔥 Hotspots</h3>";
+                if (!response.ok) {
 
-        data.forEach(h => {
-            let color = h[1] >= 5 ? "red" : h[1] >= 3 ? "orange" : "green";
+                    throw new Error(
+                        "Server error: " +
+                        response.status
+                    );
 
-            html += `<p style="color:${color}; font-weight:bold;">
-                     ${h[0]} → ${h[1]} complaints
-                     </p>`;
+                }
+
+                return response.json();
+
+            })
+
+
+            .then(data => {
+
+                globalData = data;
+
+                displayData(globalData);
+
+                message.innerText =
+                    "✅ Complaints loaded successfully";
+
+            })
+
+
+            .catch(error => {
+
+                console.error(
+                    "Error loading complaints:",
+                    error
+                );
+
+                message.innerText =
+                    "❌ Unable to load complaints";
+
+            });
+
+    }
+
+
+    // ======================================================
+    // DISPLAY COMPLAINTS
+    // ======================================================
+
+    function displayData(data) {
+
+        let search =
+            document
+                .getElementById("search")
+                .value
+                .toLowerCase();
+
+
+        let filter =
+            document
+                .getElementById("filter")
+                .value;
+
+
+        let table =
+            document.getElementById("table");
+
+
+        // TABLE HEADER
+
+        table.innerHTML = `
+
+            <tr>
+
+                <th>ID</th>
+
+                <th>Description</th>
+
+                <th>Location</th>
+
+                <th>Status</th>
+
+                <th>Priority</th>
+
+                <th>Image</th>
+
+                <th>Action</th>
+
+            </tr>
+
+        `;
+
+
+        // FILTER DATA
+
+        let filteredData = data.filter(c => {
+
+            let matchesFilter =
+                filter === "ALL" ||
+                c.status === filter;
+
+
+            let matchesSearch =
+
+                (c.location || "")
+                    .toLowerCase()
+                    .includes(search)
+
+                ||
+
+                (c.description || "")
+                    .toLowerCase()
+                    .includes(search);
+
+
+            return (
+                matchesFilter &&
+                matchesSearch
+            );
+
         });
 
-        document.getElementById("hotspots").innerHTML = html;
-    });
-}
+
+        // DISPLAY ROWS
+
+        filteredData.forEach(c => {
+
+            let row =
+                table.insertRow();
 
 
-// 📊 CHART
-function showChart() {
+            // ID
 
-    let counts = {HIGH:0, MEDIUM:0, LOW:0};
+            row.insertCell(0).innerText =
+                c.id;
 
-    globalData.forEach(c => {
-        counts[c.priority]++;
-    });
 
-    new Chart(document.getElementById("chart"), {
-        type: "bar",
-        data: {
-            labels: ["HIGH", "MEDIUM", "LOW"],
-            datasets: [{
-                label: "Complaints",
-                data: [counts.HIGH, counts.MEDIUM, counts.LOW]
-            }]
+            // DESCRIPTION
+
+            row.insertCell(1).innerText =
+                c.description || "";
+
+
+            // LOCATION
+
+            row.insertCell(2).innerText =
+                c.location || "";
+
+
+            // STATUS
+
+            row.insertCell(3).innerText =
+                c.status || "";
+
+
+            // PRIORITY
+
+            row.insertCell(4).innerText =
+                c.priority || "";
+
+
+            // =================================================
+            // IMAGE
+            // =================================================
+
+            let imgCell =
+                row.insertCell(5);
+
+
+            if (
+                c.imageUrl &&
+                c.imageUrl !== "no_image"
+            ) {
+
+                let img =
+                    document.createElement("img");
+
+
+                /*
+                 * If imageUrl starts with:
+                 *
+                 * http://
+                 * https://
+                 *
+                 * then use it directly.
+                 *
+                 * Otherwise assume Base64.
+                 */
+
+                if (
+                    c.imageUrl.startsWith("http://") ||
+                    c.imageUrl.startsWith("https://")
+                ) {
+
+                    img.src =
+                        c.imageUrl;
+
+                } else {
+
+                    img.src =
+                        "data:image/jpeg;base64," +
+                        c.imageUrl;
+
+                }
+
+
+                img.width = 70;
+
+                img.height = 70;
+
+
+                img.onerror = function () {
+
+                    imgCell.innerText =
+                        "Image unavailable";
+
+                };
+
+
+                imgCell.appendChild(img);
+
+            }
+
+            else {
+
+                imgCell.innerText =
+                    "No Image";
+
+            }
+
+
+            // =================================================
+            // ACTION BUTTONS
+            // =================================================
+
+            let actionCell =
+                row.insertCell(6);
+
+
+            // COMPLETE BUTTON
+
+            let doneBtn =
+                document.createElement("button");
+
+
+            doneBtn.innerText =
+                "✔";
+
+
+            doneBtn.className =
+                "done-btn";
+
+
+            doneBtn.title =
+                "Mark as Completed";
+
+
+            doneBtn.onclick =
+                function () {
+
+                    updateStatus(c.id);
+
+                };
+
+
+            // DELETE BUTTON
+
+            let delBtn =
+                document.createElement("button");
+
+
+            delBtn.innerText =
+                "🗑";
+
+
+            delBtn.className =
+                "delete-btn";
+
+
+            delBtn.title =
+                "Delete Complaint";
+
+
+            delBtn.onclick =
+                function () {
+
+                    deleteComplaint(c.id);
+
+                };
+
+
+            actionCell.appendChild(
+                doneBtn
+            );
+
+
+            actionCell.appendChild(
+                delBtn
+            );
+
+        });
+
+
+        // NO DATA MESSAGE
+
+        if (filteredData.length === 0) {
+
+            let row =
+                table.insertRow();
+
+
+            let cell =
+                row.insertCell(0);
+
+
+            cell.colSpan = 7;
+
+
+            cell.innerText =
+                "No complaints found";
+
+
+            cell.style.padding =
+                "20px";
+
         }
-    });
-}
+
+    }
+
+
+    // ======================================================
+    // UPDATE STATUS
+    // ======================================================
+
+    function updateStatus(id) {
+
+        fetch(
+            `/api/complaints/${id}/status?status=Completed`,
+            {
+                method: "PUT"
+            }
+        )
+
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Unable to update status"
+                );
+
+            }
+
+            return response;
+
+        })
+
+
+        .then(() => {
+
+            loadComplaints();
+
+        })
+
+
+        .catch(error => {
+
+            console.error(
+                "Error updating status:",
+                error
+            );
+
+            alert(
+                "❌ Failed to update complaint"
+            );
+
+        });
+
+    }
+
+
+    // ======================================================
+    // DELETE COMPLAINT
+    // ======================================================
+
+    function deleteComplaint(id) {
+
+        if (
+            !confirm(
+                "Delete this complaint?"
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        fetch(
+            `/api/complaints/${id}`,
+            {
+                method: "DELETE"
+            }
+        )
+
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Unable to delete complaint"
+                );
+
+            }
+
+            return response;
+
+        })
+
+
+        .then(() => {
+
+            loadComplaints();
+
+        })
+
+
+        .catch(error => {
+
+            console.error(
+                "Error deleting complaint:",
+                error
+            );
+
+            alert(
+                "❌ Failed to delete complaint"
+            );
+
+        });
+
+    }
+
+
+    // ======================================================
+    // HOTSPOTS
+    // ======================================================
+
+    function loadHotspots() {
+
+        let hotspotBox =
+            document.getElementById(
+                "hotspots"
+            );
+
+
+        hotspotBox.innerHTML =
+            "<h3>Loading hotspots...</h3>";
+
+
+        fetch(
+            "/api/complaints/hotspots"
+        )
+
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Server error: " +
+                    response.status
+                );
+
+            }
+
+            return response.json();
+
+        })
+
+
+        .then(data => {
+
+            let html =
+                "<h3>🔥 Complaint Hotspots</h3>";
+
+
+            if (
+                !data ||
+                data.length === 0
+            ) {
+
+                html +=
+                    "<p>No hotspot data available</p>";
+
+            }
+
+
+            data.forEach(h => {
+
+                let count =
+                    h[1];
+
+
+                let color =
+                    count >= 5
+                        ? "red"
+                        : count >= 3
+                            ? "orange"
+                            : "green";
+
+
+                html += `
+
+                    <p style="
+                        color:${color};
+                        font-weight:bold;
+                    ">
+
+                        ${h[0]}
+                        →
+                        ${count}
+                        complaints
+
+                    </p>
+
+                `;
+
+            });
+
+
+            hotspotBox.innerHTML =
+                html;
+
+        })
+
+
+        .catch(error => {
+
+            console.error(
+                "Error loading hotspots:",
+                error
+            );
+
+
+            hotspotBox.innerHTML = `
+
+                <h3>🔥 Complaint Hotspots</h3>
+
+                <p>
+                    ❌ Unable to load hotspots
+                </p>
+
+            `;
+
+        });
+
+    }
+
+
+    // ======================================================
+    // CHART
+    // ======================================================
+
+    function showChart() {
+
+        let counts = {
+
+            HIGH: 0,
+
+            MEDIUM: 0,
+
+            LOW: 0
+
+        };
+
+
+        globalData.forEach(c => {
+
+            if (
+                counts[c.priority]
+                !== undefined
+            ) {
+
+                counts[c.priority]++;
+
+            }
+
+        });
+
+
+        // Destroy old chart
+
+        if (chartInstance) {
+
+            chartInstance.destroy();
+
+        }
+
+
+        // Create new chart
+
+        chartInstance =
+            new Chart(
+                document.getElementById(
+                    "chart"
+                ),
+                {
+
+                    type: "bar",
+
+                    data: {
+
+                        labels: [
+
+                            "HIGH",
+
+                            "MEDIUM",
+
+                            "LOW"
+
+                        ],
+
+                        datasets: [
+
+                            {
+
+                                label:
+                                    "Complaints",
+
+                                data: [
+
+                                    counts.HIGH,
+
+                                    counts.MEDIUM,
+
+                                    counts.LOW
+
+                                ]
+
+                            }
+
+                        ]
+
+                    },
+
+                    options: {
+
+                        responsive: true,
+
+                        maintainAspectRatio:
+                            true
+
+                    }
+
+                }
+            );
+
+    }
+
 
 </script>
+
 
 </body>
 </html>

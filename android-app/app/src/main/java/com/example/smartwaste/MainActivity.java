@@ -198,8 +198,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendData() {
         new Thread(() -> {
             try {
-                URL url = new URL("http://10.208.68.230:8080/api/complaints");
-
+                URL url = new URL("http://10.12.121.230:8080/api/complaints");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);

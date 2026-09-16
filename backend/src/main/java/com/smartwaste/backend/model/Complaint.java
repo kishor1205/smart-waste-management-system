@@ -20,11 +20,10 @@ public class Complaint {
 
     private String priority;
 
-    // 🔥 ADD THIS (AI RESULT)
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "ai_result", columnDefinition = "TEXT")
     private String aiResult;
 
-    // ✅ GETTERS & SETTERS
+    // GETTERS & SETTERS
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

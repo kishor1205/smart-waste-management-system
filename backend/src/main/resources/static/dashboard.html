@@ -121,9 +121,8 @@
 
     let globalData = [];
 
-    // 🔥 LOAD DATA
     function loadComplaints() {
-        fetch("/api/complaints")
+        fetch("http://localhost:8080/api/complaints")
             .then(res => res.json())
             .then(data => {
                 globalData = data;
@@ -131,135 +130,99 @@
             });
     }
 
-    // 🔥 DISPLAY TABLE
     function displayData(data) {
+        let table = document.getElementById("table");
 
         let search = document.getElementById("search").value.toLowerCase();
         let filter = document.getElementById("filter").value;
 
-        let table = document.getElementById("table");
+        let filtered = data.filter(c => {
+            let matchSearch = c.location.toLowerCase().includes(search);
+            let matchFilter = (filter === "ALL" || c.status === filter);
+            return matchSearch && matchFilter;
+        });
 
-        table.innerHTML = `
-        <tr>
-            <th>ID</th>
-            <th>Description</th>
-            <th>Location</th>
-            <th>Status</th>
-            <th>Priority</th>
-            <th>AI Result</th>
-            <th>Image</th>
-            <th>Action</th>
-        </tr>`;
+        let html = `
+            <tr>
+                <th>ID</th>
+                <th>Description</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>AI Result</th>
+                <th>Image</th>
+                <th>Action</th>
+            </tr>
+        `;
 
-        data
-        .filter(c =>
-            (filter === "ALL" || c.status === filter) &&
-            (
-                (c.location || "").toLowerCase().includes(search) ||
-                (c.description || "").toLowerCase().includes(search)
-            )
-        )
-        .forEach(c => {
+        filtered.forEach(c => {
 
-            let row = table.insertRow();
+            // 🔥 FULL IMAGE FIX (handles all cases)
+            let imageHTML = "No Image";
 
-            row.style.background = c.status === "COMPLETED" ? "#e8f5e9" : "#fff3e0";
+            if (c.imageUrl && c.imageUrl.trim() !== "") {
 
-            row.insertCell(0).innerText = c.id;
-            row.insertCell(1).innerText = c.description;
-            row.insertCell(2).innerText = c.location;
+                if (c.imageUrl.startsWith("http")) {
+                    imageHTML = `<img src="${c.imageUrl}" width="60">`;
 
-            row.insertCell(3).innerHTML = `
-                <span class="${c.status === 'COMPLETED' ? 'status-completed' : 'status-pending'}">
-                    ${c.status}
-                </span>
-            `;
+                } else if (c.imageUrl.startsWith("data:image")) {
+                    imageHTML = `<img src="${c.imageUrl}" width="60">`;
 
-            let badge = document.createElement("span");
-            badge.className = "badge " + (c.priority || "low").toLowerCase();
-            badge.innerText = c.priority;
-            row.insertCell(4).appendChild(badge);
-
-            row.insertCell(5).innerHTML =
-                `<div class="ai-box">${c.aiResult || "No AI result"}</div>`;
-
-            // ✅ IMAGE FIX + FULL SCREEN VIEW
-            let imgCell = row.insertCell(6);
-
-            if (c.imageUrl && c.imageUrl !== "" && c.imageUrl !== "no_image") {
-
-                let img = document.createElement("img");
-
-                if (c.imageUrl.startsWith("data:image")) {
-                    img.src = c.imageUrl;
-                } else if (c.imageUrl.startsWith("http")) {
-                    img.src = c.imageUrl;
                 } else {
-                    img.src = "data:image/jpeg;base64," + c.imageUrl;
+                    imageHTML = `<img src="data:image/jpeg;base64,${c.imageUrl}" width="60">`;
                 }
-
-                img.width = 70;
-                img.height = 70;
-
-                // 🔥 FIXED FULLSCREEN VIEW
-                img.onclick = function () {
-                    let newTab = window.open();
-                    newTab.document.body.style.margin = "0";
-                    newTab.document.body.innerHTML =
-                        `<img src="${img.src}" style="width:100%">`;
-                };
-
-                imgCell.appendChild(img);
-
-            } else {
-                imgCell.innerText = "No Image";
             }
 
-            // ACTION BUTTONS
-            let actionCell = row.insertCell(7);
-
-            let doneBtn = document.createElement("button");
-            doneBtn.innerText = "Done";
-            doneBtn.className = "done-btn";
-            doneBtn.onclick = () => updateStatus(c.id);
-
-            let delBtn = document.createElement("button");
-            delBtn.innerText = "Delete";
-            delBtn.className = "delete-btn";
-            delBtn.onclick = () => deleteComplaint(c.id);
-
-            actionCell.appendChild(doneBtn);
-            actionCell.appendChild(delBtn);
+            html += `
+            <tr>
+                <td>${c.id}</td>
+                <td>${c.description}</td>
+                <td>${c.location}</td>
+                <td class="${c.status === 'PENDING' ? 'status-pending' : 'status-completed'}">${c.status}</td>
+                <td>
+                    <span class="badge ${c.priority?.toLowerCase()}">${c.priority || '-'}</span>
+                </td>
+                <td><div class="ai-box">${c.aiResult || '-'}</div></td>
+                <td>${imageHTML}</td>
+                <td>
+                    <button class="done-btn" onclick="updateStatus(${c.id})">Done</button>
+                    <button class="delete-btn" onclick="deleteComplaint(${c.id})">Delete</button>
+                </td>
+            </tr>
+            `;
         });
+
+        table.innerHTML = html;
     }
 
-    // 🔥 UPDATE STATUS
-    function updateStatus(id) {
-        fetch(`/api/complaints/${id}/status?status=COMPLETED`, { method: "PUT" })
-            .then(() => loadComplaints());
-    }
-
-    // 🔥 DELETE
-    function deleteComplaint(id) {
-        fetch(`/api/complaints/${id}`, { method: "DELETE" })
-            .then(() => loadComplaints());
-    }
-
-    // 🔥 HOTSPOTS
     function loadHotspots() {
-        fetch("/api/complaints/hotspots")
+        fetch("http://localhost:8080/api/complaints/hotspots")
             .then(res => res.json())
             .then(data => {
                 let div = document.getElementById("hotspots");
                 div.innerHTML = "<h3>Hotspots</h3>";
 
                 data.forEach(h => {
-                    div.innerHTML += `<p>${h[0]} → ${h[1]} complaints</p>`;
+                    div.innerHTML += `<p>${h[0]} → ${h[1]}</p>`;
                 });
             });
     }
 
-</script>
+    function updateStatus(id) {
+        fetch(`http://localhost:8080/api/complaints/${id}/status?status=COMPLETED`, {
+            method: "PUT"
+        }).then(() => loadComplaints());
+    }
 
+    function deleteComplaint(id) {
+        fetch(`http://localhost:8080/api/complaints/${id}`, {
+            method: "DELETE"
+        }).then(() => loadComplaints());
+    }
+
+    // 🔥 auto load on open (optional but useful)
+    window.onload = loadComplaints;
+
+</script>
 </body>
 </html>
