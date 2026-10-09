@@ -6,13 +6,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/ai")
+@CrossOrigin
 public class AIController {
 
     @Autowired
     private GeminiService geminiService;
 
+    // Analyze a complaint using its category and description.
     @GetMapping("/analyze")
-    public String analyze(@RequestParam String complaint) {
-        return geminiService.analyzeComplaint(complaint);
+    public String analyze(
+            @RequestParam String complaint,
+            @RequestParam(defaultValue = "Other Civic Issue") String category
+    ) {
+        return geminiService.analyzeComplaint(category, complaint);
     }
 }

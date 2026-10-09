@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartWaste | Citizen Portal</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        header {
+            background: #14532d;
+            color: white;
+            padding: 24px 16px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+        }
+
+        header p {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 16px;
+        }
+
+        .search-box, .card {
+            background: white;
+            padding: 24px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+        }
+
+        .search-box h2 {
+            margin-top: 0;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 13px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #15803d;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #166534;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .message {
+            margin-top: 15px;
+            overflow-wrap: anywhere;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: #14532d;
+        }
+
+        .detail {
+            margin: 14px 0;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .progress {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .priority {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .ai-box {
+            background: #eff6ff;
+            padding: 18px;
+            border-radius: 10px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .complaint-image {
+            display: block;
+            max-width: 100%;
+            max-height: 350px;
+            margin-top: 12px;
+            border-radius: 10px;
+            object-fit: contain;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+        }
+
+        @media (max-width: 500px) {
+            .search-row {
+                flex-direction: column;
+            }
+
+            .search-row button {
+                width: 100%;
+            }
+
+            .search-box, .card {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>♻️ SmartWaste</h1>
+    <p>Citizen Complaint Tracking Portal</p>
+</header>
+
+<div class="container">
+
+    <div class="search-box">
+        <h2>Track Your Complaint</h2>
+        <p>Enter your complaint ID to check its latest status.</p>
+
+        <div class="search-row">
+            <input
+                    type="number"
+                    id="complaintId"
+                    placeholder="Enter Complaint ID"
+                    min="1"
+            >
+
+            <button onclick="searchComplaint()">Track</button>
+        </div>
+
+        <div id="message" class="message" role="status"></div>
+    </div>
+
+    <div id="result" class="card hidden">
+        <h2>Complaint Details</h2>
+
+        <div class="detail">
+            <strong>Complaint ID:</strong>
+            <span id="id"></span>
+        </div>
+
+        <div class="detail">
+            <strong>Description:</strong>
+            <span id="description"></span>
+        </div>
+
+        <div class="detail">
+            <strong>Location:</strong>
+            <span id="location"></span>
+        </div>
+
+        <div class="detail">
+            <strong>Status:</strong>
+            <span id="status" class="badge"></span>
+        </div>
+
+        <div class="detail">
+            <strong>Priority:</strong>
+            <span id="priority" class="badge priority"></span>
+        </div>
+
+        <div id="imageSection" class="detail hidden">
+            <strong>Complaint Image:</strong>
+            <img id="image" class="complaint-image" alt="Uploaded waste complaint">
+        </div>
+
+        <div class="ai-box">
+            <h3>🤖 AI Complaint Analysis</h3>
+            <div id="aiResult">No AI analysis is available for this complaint.</div>
+        </div>
+
+        <p id="updatedMessage">
+            Status is retrieved from the complaint system.
+        </p>
+
+        <button onclick="searchComplaint()">🔄 Refresh Status</button>
+    </div>
+
+</div>
+
+<footer>
+    SmartWaste — Cleaner Communities, Better Living 🌱
+</footer>
+
+<script>
+    async function searchComplaint() {
+        const idInput = document.getElementById("complaintId");
+        const message = document.getElementById("message");
+        const result = document.getElementById("result");
+
+        const id = idInput.value.trim();
+
+        if (!id || Number(id) < 1 || !Number.isInteger(Number(id))) {
+            message.textContent = "Please enter a valid complaint ID.";
+            result.classList.add("hidden");
+            return;
+        }
+
+        message.textContent = "Searching for your complaint...";
+        result.classList.add("hidden");
+
+        try {
+            // Fetch existing complaints from the Spring Boot backend.
+            const response = await fetch("/api/complaints");
+
+            if (!response.ok) {
+                throw new Error("Unable to connect to the complaint service.");
+            }
+
+            const complaints = await response.json();
+
+            const complaint = complaints.find(
+                item => String(item.id) === String(id)
+            );
+
+            if (!complaint) {
+                message.textContent =
+                    "No complaint found with ID " + id + ".";
+                return;
+            }
+
+            document.getElementById("id").textContent =
+                complaint.id ?? "N/A";
+
+            document.getElementById("description").textContent =
+                complaint.description || "Not available";
+
+            document.getElementById("location").textContent =
+                complaint.location || "Not available";
+
+            const statusElement = document.getElementById("status");
+            const status = complaint.status || "Unknown";
+
+            statusElement.textContent = status;
+            statusElement.className = "badge";
+
+            const normalizedStatus = status.toLowerCase();
+
+            if (normalizedStatus.includes("complete")) {
+                statusElement.classList.add("completed");
+            } else if (
+                normalizedStatus.includes("progress") ||
+                normalizedStatus.includes("assigned")
+            ) {
+                statusElement.classList.add("progress");
+            } else {
+                statusElement.classList.add("pending");
+            }
+
+            document.getElementById("priority").textContent =
+                complaint.priority || "Not assigned";
+
+            // Display the analysis already stored in the database.
+            document.getElementById("aiResult").textContent =
+                complaint.aiResult ||
+                "AI analysis is not available for this complaint.";
+
+            // Display the image when a usable image URL exists.
+            const imageSection = document.getElementById("imageSection");
+            const image = document.getElementById("image");
+
+            imageSection.classList.add("hidden");
+            image.removeAttribute("src");
+
+            if (complaint.imageUrl) {
+                image.onload = () => imageSection.classList.remove("hidden");
+
+                image.onerror = () => {
+                    imageSection.classList.add("hidden");
+                };
+
+                image.src = complaint.imageUrl;
+            }
+
+            document.getElementById("updatedMessage").textContent =
+                "Current status: " + status;
+
+            result.classList.remove("hidden");
+            message.textContent = "Complaint found successfully!";
+
+        } catch (error) {
+            console.error(error);
+
+            message.textContent =
+                "Could not retrieve the complaint. Check that Spring Boot is running.";
+        }
+    }
+
+    document.getElementById("complaintId").addEventListener(
+        "keydown",
+        event => {
+            if (event.key === "Enter") {
+                searchComplaint();
+            }
+        }
+    );
+</script>
+
+</body>
+</html>

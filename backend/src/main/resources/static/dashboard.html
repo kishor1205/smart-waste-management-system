@@ -1,22 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Waste Dashboard</title>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             background: #eef2f7;
             margin: 0;
             text-align: center;
+            color: #222;
         }
 
-        h2 { margin-top: 20px; }
+        h2 {
+            margin-top: 20px;
+        }
 
         input, select {
-            padding: 8px;
+            padding: 9px;
             margin: 5px;
             border-radius: 5px;
             border: 1px solid #ccc;
@@ -24,11 +33,16 @@
 
         button {
             padding: 8px 12px;
-            margin: 5px;
+            margin: 4px;
             border: none;
             border-radius: 6px;
             color: white;
             cursor: pointer;
+            font-size: 13px;
+        }
+
+        button:hover {
+            opacity: 0.85;
         }
 
         .load-btn { background: #4CAF50; }
@@ -36,64 +50,201 @@
         .done-btn { background: #4CAF50; }
         .delete-btn { background: #f44336; }
 
-        table {
-            width: 95%;
-            margin: auto;
-            border-collapse: collapse;
+        .view-ai-btn {
+            background: #007bff;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .table-container {
+            width: 98%;
+            margin: 20px auto;
+            overflow-x: auto;
             background: white;
             border-radius: 10px;
-            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
         }
 
         th {
             background: #007bff;
             color: white;
-            padding: 10px;
+            padding: 12px 8px;
+            font-size: 13px;
+            white-space: nowrap;
         }
 
         td {
-            padding: 10px;
+            padding: 10px 8px;
             border-bottom: 1px solid #ddd;
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #f8faff;
+        }
+
+        .description-cell {
+            min-width: 150px;
+            max-width: 200px;
+            overflow-wrap: anywhere;
+        }
+
+        .location-cell {
+            min-width: 200px;
+            max-width: 280px;
+            overflow-wrap: anywhere;
+            line-height: 1.5;
         }
 
         .badge {
-            padding: 5px 8px;
+            display: inline-block;
+            padding: 5px 9px;
             border-radius: 6px;
             color: white;
             font-size: 12px;
+            font-weight: bold;
         }
 
-        .high { background: red; }
-        .medium { background: orange; }
-        .low { background: green; }
+        .high { background: #e53935; }
+        .medium { background: #fb8c00; }
+        .low { background: #2e9d50; }
 
+        /* Compact AI analysis preview */
         .ai-box {
-            max-width: 260px;
-            font-size: 13px;
-            text-align: left;
-            background: #f1f5ff;
+            width: 220px;
+            max-width: 220px;
+            margin: auto;
             padding: 10px;
+            background: #f1f5ff;
             border-radius: 8px;
-            white-space: pre-line;
+            text-align: left;
         }
 
-        .status-pending { color: orange; font-weight: bold; }
-        .status-completed { color: green; font-weight: bold; }
+        .ai-preview {
+            font-size: 12px;
+            line-height: 1.5;
+            color: #333;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+        }
+
+        .ai-label {
+            display: block;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            color: #e68a00;
+            font-weight: bold;
+        }
+
+        .status-completed {
+            color: green;
+            font-weight: bold;
+        }
 
         img {
             border-radius: 8px;
             border: 1px solid #ccc;
             cursor: pointer;
+            object-fit: cover;
         }
 
         .box {
-            margin-top: 20px;
+            margin: 20px auto;
             padding: 15px;
             background: white;
             width: 80%;
-            margin-left: auto;
-            margin-right: auto;
             border-radius: 10px;
+        }
+
+        /* AI analysis popup */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            width: 90%;
+            max-width: 650px;
+            margin: 5vh auto;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: left;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #007bff;
+            padding-right: 30px;
+        }
+
+        .modal-description {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .full-ai-text {
+            background: #f1f5ff;
+            padding: 18px;
+            border-radius: 8px;
+            line-height: 1.7;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #f44336;
+            font-size: 18px;
+            padding: 5px 11px;
+        }
+
+        .modal-footer {
+            text-align: right;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                width: 100%;
+            }
+
+            .box {
+                width: 95%;
+            }
+
+            .modal-content {
+                width: 100%;
+                padding: 18px;
+            }
         }
     </style>
 </head>
@@ -102,127 +253,382 @@
 
 <h2>Smart Waste Dashboard</h2>
 
-<input type="text" id="search" placeholder="Search location..." onkeyup="displayData(globalData)">
+<div>
+    <input
+            type="text"
+            id="search"
+            placeholder="Search location..."
+            oninput="displayData(globalData)"
+    >
 
-<select id="filter" onchange="displayData(globalData)">
-    <option value="ALL">All</option>
-    <option value="PENDING">Pending</option>
-    <option value="COMPLETED">Completed</option>
-</select>
+    <select id="filter" onchange="displayData(globalData)">
+        <option value="ALL">All Complaints</option>
+        <option value="PENDING">Pending</option>
+        <option value="COMPLETED">Completed</option>
+    </select>
 
-<button class="load-btn" onclick="loadComplaints()">Load</button>
-<button class="hotspot-btn" onclick="loadHotspots()">Hotspots</button>
+    <button class="load-btn" onclick="loadComplaints()">Load</button>
+    <button class="hotspot-btn" onclick="loadHotspots()">Hotspots</button>
+</div>
 
-<table id="table"></table>
+<div class="table-container">
+    <table id="table"></table>
+</div>
 
 <div id="hotspots" class="box"></div>
 
-<script>
+<!-- Full AI Analysis Popup -->
+<div id="aiModal" class="modal">
+    <div class="modal-content">
 
+        <button
+                type="button"
+                class="close-modal"
+                onclick="closeAIAnalysis()"
+        >×</button>
+
+        <h3>AI Complaint Analysis</h3>
+
+        <div id="modalDescription" class="modal-description"></div>
+
+        <div id="fullAIText" class="full-ai-text"></div>
+
+        <div class="modal-footer">
+            <button
+                    type="button"
+                    class="load-btn"
+                    onclick="closeAIAnalysis()"
+            >Close</button>
+        </div>
+
+    </div>
+</div>
+
+<script>
     let globalData = [];
 
-    function loadComplaints() {
-        fetch("http://localhost:8080/api/complaints")
-            .then(res => res.json())
-            .then(data => {
-                globalData = data;
-                displayData(data);
-            });
+    // Load complaints from backend
+    async function loadComplaints() {
+        try {
+            const response = await fetch(
+                "http://localhost:8080/api/complaints"
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to load complaints");
+            }
+
+            globalData = await response.json();
+            displayData(globalData);
+
+        } catch (error) {
+            console.error("Load complaints error:", error);
+            alert("Unable to load complaints. Check whether the backend is running.");
+        }
     }
 
+    // Escape text before inserting it into HTML
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[character]);
+    }
+
+    // Display and filter complaints
     function displayData(data) {
-        let table = document.getElementById("table");
+        const table = document.getElementById("table");
 
-        let search = document.getElementById("search").value.toLowerCase();
-        let filter = document.getElementById("filter").value;
+        const search = document.getElementById("search")
+            .value.toLowerCase();
 
-        let filtered = data.filter(c => {
-            let matchSearch = c.location.toLowerCase().includes(search);
-            let matchFilter = (filter === "ALL" || c.status === filter);
+        const filter = document.getElementById("filter").value;
+
+        const filtered = data.filter(c => {
+            const location = (c.location || "").toLowerCase();
+            const status = (c.status || "").toUpperCase();
+
+            const matchSearch = location.includes(search);
+            const matchFilter =
+                filter === "ALL" || status === filter;
+
             return matchSearch && matchFilter;
         });
 
         let html = `
-            <tr>
-                <th>ID</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>AI Result</th>
-                <th>Image</th>
-                <th>Action</th>
-            </tr>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Description</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>AI Analysis</th>
+                    <th>Image</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
         `;
 
-        filtered.forEach(c => {
+        if (filtered.length === 0) {
+            html += `
+                <tr>
+                    <td colspan="8" style="padding:25px;">
+                        No complaints found.
+                    </td>
+                </tr>
+            `;
+        }
 
-            // 🔥 FULL IMAGE FIX (handles all cases)
+        filtered.forEach(c => {
+            // Handle complaint image
             let imageHTML = "No Image";
 
             if (c.imageUrl && c.imageUrl.trim() !== "") {
+                let imageSrc;
 
-                if (c.imageUrl.startsWith("http")) {
-                    imageHTML = `<img src="${c.imageUrl}" width="60">`;
-
-                } else if (c.imageUrl.startsWith("data:image")) {
-                    imageHTML = `<img src="${c.imageUrl}" width="60">`;
-
+                if (
+                    c.imageUrl.startsWith("http") ||
+                    c.imageUrl.startsWith("data:image")
+                ) {
+                    imageSrc = c.imageUrl;
                 } else {
-                    imageHTML = `<img src="data:image/jpeg;base64,${c.imageUrl}" width="60">`;
+                    imageSrc = "data:image/jpeg;base64," + c.imageUrl;
                 }
+
+                imageHTML = `
+                    <img
+                        src="${escapeHTML(imageSrc)}"
+                        width="60"
+                        height="60"
+                        alt="Complaint image"
+                        onclick="window.open(this.src, '_blank')"
+                    >
+                `;
             }
 
+            // Short AI preview
+            const aiResult =
+                c.aiResult || "No AI analysis available.";
+
+            const preview = aiResult.length > 140
+                ? aiResult.substring(0, 140) + "..."
+                : aiResult;
+
+            const priority = (c.priority || "").toLowerCase();
+            const status = (c.status || "").toUpperCase();
+
+            const statusClass = status === "PENDING"
+                ? "status-pending"
+                : "status-completed";
+
+            const complaintId = Number(c.id);
+
             html += `
-            <tr>
-                <td>${c.id}</td>
-                <td>${c.description}</td>
-                <td>${c.location}</td>
-                <td class="${c.status === 'PENDING' ? 'status-pending' : 'status-completed'}">${c.status}</td>
-                <td>
-                    <span class="badge ${c.priority?.toLowerCase()}">${c.priority || '-'}</span>
-                </td>
-                <td><div class="ai-box">${c.aiResult || '-'}</div></td>
-                <td>${imageHTML}</td>
-                <td>
-                    <button class="done-btn" onclick="updateStatus(${c.id})">Done</button>
-                    <button class="delete-btn" onclick="deleteComplaint(${c.id})">Delete</button>
-                </td>
-            </tr>
+                <tr>
+                    <td>${escapeHTML(c.id)}</td>
+
+                    <td class="description-cell">
+                        ${escapeHTML(c.description || "-")}
+                    </td>
+
+                    <td class="location-cell">
+                        ${escapeHTML(c.location || "-")}
+                    </td>
+
+                    <td class="${statusClass}">
+                        ${escapeHTML(c.status || "-")}
+                    </td>
+
+                    <td>
+                        <span class="badge ${escapeHTML(priority)}">
+                            ${escapeHTML(c.priority || "-")}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="ai-box">
+                            <span class="ai-label">AI Summary</span>
+
+                            <div class="ai-preview">${escapeHTML(preview)}</div>
+
+                            <button
+                                type="button"
+                                class="view-ai-btn"
+                                data-complaint-id="${complaintId}"
+                            >
+                                View Full Analysis
+                            </button>
+                        </div>
+                    </td>
+
+                    <td>${imageHTML}</td>
+
+                    <td>
+                        ${
+                            status !== "COMPLETED"
+                                ? '<button class="done-btn" onclick="updateStatus(' + complaintId + ')">Done</button>'
+                                : '<span class="status-completed">Completed</span>'
+                        }
+
+                        <button
+                            class="delete-btn"
+                            onclick="deleteComplaint(${complaintId})"
+                        >
+                            Delete
+                        </button>
+                    </td>
+                </tr>
             `;
         });
 
+        html += "</tbody>";
         table.innerHTML = html;
     }
 
-    function loadHotspots() {
-        fetch("http://localhost:8080/api/complaints/hotspots")
-            .then(res => res.json())
-            .then(data => {
-                let div = document.getElementById("hotspots");
-                div.innerHTML = "<h3>Hotspots</h3>";
+    /*
+     * Event delegation:
+     * This ensures View Full Analysis works even after the table
+     * is regenerated during searching, filtering, or reloading.
+     */
+    document.getElementById("table").addEventListener("click", function(event) {
+        const button = event.target.closest(".view-ai-btn");
 
-                data.forEach(h => {
-                    div.innerHTML += `<p>${h[0]} → ${h[1]}</p>`;
-                });
+        if (button) {
+            const id = button.dataset.complaintId;
+            showAIAnalysis(id);
+        }
+    });
+
+    // Open full AI analysis
+    function showAIAnalysis(id) {
+        const complaint = globalData.find(
+            c => String(c.id) === String(id)
+        );
+
+        if (!complaint) {
+            alert("Complaint not found. Please reload the dashboard.");
+            return;
+        }
+
+        document.getElementById("modalDescription").textContent =
+            "Complaint #" + complaint.id + ": " +
+            (complaint.description || "No description");
+
+        document.getElementById("fullAIText").textContent =
+            complaint.aiResult || "No AI analysis available.";
+
+        document.getElementById("aiModal").style.display = "block";
+        document.body.style.overflow = "hidden";
+    }
+
+    // Close popup
+    function closeAIAnalysis() {
+        document.getElementById("aiModal").style.display = "none";
+        document.body.style.overflow = "";
+    }
+
+    // Close popup by clicking outside it
+    document.getElementById("aiModal").addEventListener("click", function(event) {
+        if (event.target === this) {
+            closeAIAnalysis();
+        }
+    });
+
+    // Close popup using Escape
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+            closeAIAnalysis();
+        }
+    });
+
+    // Load hotspots
+    async function loadHotspots() {
+        try {
+            const response = await fetch(
+                "http://localhost:8080/api/complaints/hotspots"
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to load hotspots");
+            }
+
+            const data = await response.json();
+            const div = document.getElementById("hotspots");
+
+            div.innerHTML = "<h3>Hotspots</h3>";
+
+            if (!data || data.length === 0) {
+                div.innerHTML += "<p>No hotspots found.</p>";
+                return;
+            }
+
+            data.forEach(h => {
+                const p = document.createElement("p");
+
+                p.textContent =
+                    (h[0] ?? "Unknown") + " → " + (h[1] ?? 0);
+
+                div.appendChild(p);
             });
+
+        } catch (error) {
+            console.error("Hotspots error:", error);
+            alert("Unable to load hotspots.");
+        }
     }
 
-    function updateStatus(id) {
-        fetch(`http://localhost:8080/api/complaints/${id}/status?status=COMPLETED`, {
-            method: "PUT"
-        }).then(() => loadComplaints());
+    // Mark complaint as completed
+    async function updateStatus(id) {
+        try {
+            const response = await fetch(
+                `http://localhost:8080/api/complaints/${id}/status?status=COMPLETED`,
+                { method: "PUT" }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to update status");
+            }
+
+            await loadComplaints();
+
+        } catch (error) {
+            console.error("Update status error:", error);
+            alert("Unable to update complaint status.");
+        }
     }
 
-    function deleteComplaint(id) {
-        fetch(`http://localhost:8080/api/complaints/${id}`, {
-            method: "DELETE"
-        }).then(() => loadComplaints());
+    // Delete complaint
+    async function deleteComplaint(id) {
+        if (!confirm("Are you sure you want to delete complaint #" + id + "?")) {
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `http://localhost:8080/api/complaints/${id}`,
+                { method: "DELETE" }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to delete complaint");
+            }
+
+            await loadComplaints();
+
+        } catch (error) {
+            console.error("Delete complaint error:", error);
+            alert("Unable to delete complaint.");
+        }
     }
 
-    // 🔥 auto load on open (optional but useful)
+    // Load complaints automatically when the page opens
     window.onload = loadComplaints;
-
 </script>
+
 </body>
 </html>
